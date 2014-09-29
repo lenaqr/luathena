@@ -1,0 +1,37 @@
+#!/usr/bin/python
+
+# colorsubs: ZephyrPlus-like color hash for barnowl
+#
+# Usage:
+# $ add lua
+# $ colorsubs > ~/.owl/colors
+# and within barnowl (or in .owl/startup): source ~/.owl/colors
+#
+# This script reads your zephyr subscriptions file and generates a
+# list of barnowl commands that assigns a color to each class
+# subscribed. If you add new subs, run this script again to assign new
+# colors.
+#
+# In order for this to look decent, you must have 256-color support
+# working in barnowl. See: http://barnowl.mit.edu/wiki/256Colors
+
+from __future__ import print_function
+
+colorcodes = [104, 110, 114, 115, 116, 140, 150, 174, 175, 176, 180, 186] # 61, 67, 71, 72, 73, 97, 107, 131, 132, 133, 137, 143, 
+
+def color(c):
+    h = hash(c) % len(colorcodes)
+    return colorcodes[h]
+
+if __name__ == '__main__':
+    from os.path import expanduser
+    classes = set()
+    with open(expanduser('~/.zephyr.subs')) as f:
+        for line in f:
+            if line.endswith(',*,*\n'):
+                c = line[:-len(',*,*\n')]
+                while c.startswith('un'):
+                    c = c[len('un'):]
+                classes.add(c)
+    for c in sorted(classes):
+        print('colorclass', "'" + c + "'", color(c))

@@ -1,0 +1,37 @@
+#!/bin/bash -e
+
+# lists-and-owned-diff,
+# based on lists-diff and lists-owned-diff by lizdenys
+# a simple script to zephyr you when your list membership
+# or list, fs, machine, etc.  ownership changes
+
+# See also: cont-run-zephyr, lists-diff-once, lists-owned-diff-once
+
+# Author: Anthony S Lu (lua)
+# Last updated on July 5, 2014
+
+# Warn the user about how this should be used
+echo "This script checks updates to your list membership and ownership "
+echo "every 15 minutes and zephyrs you any changes until it receives SIGTERM. "
+echo "Changes are also echoed to the shell where the script was run from."
+echo
+echo "This script also assumes that both you and your kerberos "
+echo "principal are on and own at least one list each; if not, you may "
+echo "not be notified of all list ownership changes--namely, when either "
+echo "you or your kerberos principal no longer own any lists."
+echo
+echo "If you kill this script and rerun it in the same directory as "
+echo "the previous OLD_LISTS, OLD_KLISTS, OLD_OWNED_LISTS, and"
+echo "OLD_OWNED_KLISTS files, then it will seamlessly show you any changes "
+echo "to your list ownership since the last time you ran lists-owned-diff."
+echo
+echo "You should be running this in a directory that only you can "
+echo "read, such as ~/Private. Otherwise, you risk exposing your list "
+echo "ownership, and you should abort this script, delete OLD_LISTS, "
+echo "OLD_KLISTS, OLD_OWNED_LISTS, and OLD_OWNED_KLISTS, delete "
+echo "NEW_LISTS, NEW_KLISTS, NEW_OWNED_LISTS, and NEW_OWNED_KLISTS if they "
+echo "exist, switch to a protected directory, and rerun this script there."
+echo
+
+add lua
+cont-run-zephyr lists-diff-once lists-owned-diff-once

@@ -1,0 +1,79 @@
+#!/bin/bash -e
+
+# lists-owned-diff-once,
+# based on lists-owned-diff by lizdenys
+# a simple script to check for your list, fs, machine, etc.
+# ownership changes
+
+# See also: lists-and-owned-diff, lists-diff-once
+
+# Author: Anthony S Lu (lua)
+# Last updated on July 5, 2014
+
+# Check old list ownership
+touch OLD_OWNED_LISTS
+numOwnedLists="$(wc -l OLD_LISTS | awk '{print $1}')"
+touch OLD_OWNED_KLISTS
+numOwnedKLists="$(wc -l OLD_KLISTS | awk '{print $1}')"
+
+# Get new list ownership
+athrun ops qy -s gaus ruser $USER | sort > NEW_OWNED_LISTS
+athrun ops qy -s gaus rkerberos $USER@ATHENA.MIT.EDU | sort > NEW_OWNED_KLISTS
+
+if [ ! -s NEW_OWNED_LISTS ] && [ $numOwnedLists -ne 0 ]; then
+    # Write out that we couldn't get list membership because
+    # either qy failed or they are no longer on any lists.
+    echo "No ownership for "$USER"."
+else
+    # Get changes to list ownership
+    removedowns="$(comm -23 OLD_OWNED_LISTS NEW_OWNED_LISTS)"
+    addedowns="$(comm -13 OLD_OWNED_LISTS NEW_OWNED_LISTS)"
+
+    # Report changes if there are any
+    if [ -n "$removedowns" ]; then
+        if [ -n "$addedowns" ]; then
+            echo "You now own the following:"
+            echo "$addedowns"
+            echo
+            echo "You no longer own the following:"
+            echo "$removedowns"
+        else
+            echo "You no longer own the following:"
+            echo "$removedowns"
+        fi
+    elif [ -n "$addedowns" ]; then
+        echo "You now own the following:"
+        echo "$addedowns"
+    fi
+fi
+
+if [ ! -s NEW_OWNED_KLISTS ] && [ $numOwnedKLists -ne 0 ]; then
+    # Write out that we couldn't get kerberos list membership
+    # because either qy failed or they are no longer on any lists.
+    echo "No kerberos ownership for "$USER"."
+else
+    # Get changes to list ownership
+    kremovedowns="$(comm -23 OLD_OWNED_KLISTS NEW_OWNED_KLISTS)"
+    kaddedowns="$(comm -13 OLD_OWNED_KLISTS NEW_OWNED_KLISTS)"
+
+    # Report changes if there are any
+    if [ -n "$kremovedowns" ]; then
+        if [ -n "$kaddedowns" ]; then
+            echo "Your kerberos principal now owns the following:"
+            echo "$kaddedowns"
+            echo
+            echo "Your kerberos principal no longer owns the following:"
+            echo "$kremovedowns"
+        else
+            echo "Your kerberos principal no longer owns the following:"
+            echo "$kremovedowns"
+        fi
+    elif [ -n "$kaddedowns" ]; then
+        echo "Your kerberos principal now owns the following:"
+        echo "$kaddedowns"
+    fi
+fi
+
+# Clean up
+mv NEW_OWNED_LISTS OLD_OWNED_LISTS
+mv NEW_OWNED_KLISTS OLD_OWNED_KLISTS

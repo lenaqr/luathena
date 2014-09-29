@@ -1,0 +1,12 @@
+#!/bin/bash -e
+
+ZLOG_CLASS_DIR="$HOME/zlog/class/"
+ls -1 "$ZLOG_CLASS_DIR" | while read -r line
+do
+    class="$line,*,*"
+    unclass="un$class"
+    if grep -Fxq "$class" ~/.zephyr.subs && ! grep -Fxq "$unclass" ~/.zephyr.subs
+    then
+        echo "$unclass" | tee -a ~/.zephyr.subs
+    fi
+done

@@ -1,0 +1,141 @@
+#!/usr/bin/python2
+
+# newlist: a simple and fast command line interface to the online
+# Moira list creation form
+#
+# (Warning: error reporting is currently kind of poor.)
+#
+# See also: makelist, sparelist.
+#
+# Author: Anthony S Lu (lua)
+# Last updated on Dec 8, 2013
+
+# Use Python 3 syntax
+from __future__ import print_function, unicode_literals
+
+# Detect Python version, activate virtualenv
+import sys
+activate_this = None
+if sys.version_info[0] == 2:
+    if sys.version_info[1] == 7:
+        activate_this = '/mit/lua/pythonenv2.7/bin/activate_this.py'
+    elif sys.version_info[1] == 6:
+        activate_this = '/mit/lua/pythonenv2.6/bin/activate_this.py'
+if activate_this is not None:
+    execfile(activate_this, dict(__file__=activate_this))
+
+import pickle
+import os
+import subprocess
+import random
+import getpass
+
+import requests
+from requests_kerberos import HTTPKerberosAuth, OPTIONAL
+from bs4 import BeautifulSoup
+
+SCRIPT_NAME = os.path.basename(__file__)
+
+URL = 'https://listmaker.mit.edu/lc/'
+IDP_URL = 'https://idp.mit.edu/idp/Authn/Kerberos'
+MOIRA_URL = URL + 'moira'
+CONFIRM_URL = URL + 'confirm'
+DONE_URL = URL + 'done'
+
+BLANCHE_NOLIST = b"blanche: No records in database match query while getting list information\n"
+BLANCHE_PERM = b"blanche: Insufficient permission to perform requested database access while updating list.\n"
+BLANCHE_EXIST = b"blanche: Arguments not unique while updating list.\n"
+
+def save_session(s):
+    """Serialize and store a Session to be loaded later."""
+
+    # need to set __attrs__ due to a bug in requests 1.1.0
+    s.__attrs__ = [
+        'headers', 'cookies', 'auth', 'timeout', 'proxies', 'hooks',
+        'params', 'verify', 'cert', 'prefetch'
+    ]
+    path = '/tmp/newlist-{0}.pkl'.format(getpass.getuser())
+    with open(path, 'w') as f:
+        # make sure others can't read our session
+        # XXX: potentially racy, maybe use os.open() instead
+        os.chmod(path, 0o600)
+        pickle.dump(s, f)
+
+def load_session():
+    """Load a saved Session or establish a new one."""
+
+    try:
+        # try deserializing a saved session
+        path = '/tmp/newlist-{0}.pkl'.format(getpass.getuser())
+        with open(path, 'r') as f:
+            ds = pickle.load(f)
+            # need to create a fresh session because the unpickled one
+            # is missing some fields.
+            s = requests.Session()
+            s.__dict__.update(ds.__dict__)
+            # check that our session has valid auth tokens
+            assert s.get(URL).url == URL
+    except (pickle.UnpicklingError,
+            IOError,
+            EOFError,
+            AttributeError,
+            AssertionError):
+        # no valid session, start over
+        s = requests.Session()
+        r1 = s.get(URL)
+        # auth to touchstone
+        r2 = s.post(r1.url, dict(user_idp='https://idp.mit.edu/shibboleth',
+                                 duration='Session'))
+        r3 = s.get(IDP_URL, auth=HTTPKerberosAuth(mutual_authentication=OPTIONAL))
+        soup = BeautifulSoup(r3.content)
+        form = soup.find('form')
+        action = form['action']
+        data = dict((item['name'], item['value'])
+                    for item in form.find_all(lambda tag: tag.has_attr('name') and tag.has_attr('value')))
+        r5 = s.post(action, data)
+        # save this session so we can load it later
+        save_session(s)
+    return s
+
+def new_list(lname):
+    """Create a new list with name lname."""
+
+    # get auth tokens
+    s = load_session()
+
+    # submit list creation form
+    r6 = s.post(MOIRA_URL, dict(Submit='Next >>',
+                                data='1',
+                                mail='1',
+                                lname=lname))
+    if r6.url == MOIRA_URL:
+        soup = BeautifulSoup(r6.content)
+        err = soup.find('table', bgcolor='#FFFF00')
+        if err:
+            return False, err.text.strip()
+    if r6.url != CONFIRM_URL:
+        return False, None
+    # confirm
+    r7 = s.post(CONFIRM_URL, dict(Submit='Next >>',
+                                  data='1'))
+    if r7.url != DONE_URL:
+        return False, None
+    else:
+        return True, None
+
+def interactive_new_list(lname):
+    print('Creating list {0}...'.format(lname), file=sys.stderr, end=' ')
+    created, msg = new_list(lname)
+    if not msg:
+        if created:
+            msg = 'Finished! Your list has been created.'
+        else:
+            msg = 'Unknown error occurred while creating list.'
+    print(msg, file=sys.stderr)
+
+if __name__ == '__main__':
+    if len(sys.argv) == 2:
+        lname = sys.argv[1]
+        interactive_new_list(lname)
+    else:
+        print('Usage: {0} [list name]'.format(os.path.basename(sys.argv[0])), file=sys.stderr)

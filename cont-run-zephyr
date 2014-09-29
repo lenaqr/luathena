@@ -1,0 +1,12 @@
+#!/bin/bash -e
+
+# Repeat every 15 minutes until given SIGTERM
+while true
+do
+    # Run command(s), zephyr output if there is any
+    for cmd in "$@"
+    do
+        $cmd | tee >(ifne zwrite "$USER" -O auto -s "$cmd" -d -n)
+    done
+    sleep 900
+done

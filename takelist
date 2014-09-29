@@ -1,0 +1,60 @@
+#!/bin/bash
+
+# takelist: the fastest way to claim a Moira list
+#
+# This is a small wrapper around my other script, newlist. Rather than
+# create a list directly, this script assumes you have a pool of spare
+# lists available and renames one of them to the list name you
+# want. Then it runs newlist to replace the spare list it used.
+#
+# If you don't have such a pool of spare lists, run sparelist first.
+#
+# See also: newlist, sparelist.
+#
+# Author: Anthony S Lu (lua)
+# Last updated on Dec 8, 2013
+
+if [ "$#" -eq 0 ]
+then
+    echo "Usage: $0 [list name] [blanche args for initializing list]"
+    exit 0
+fi
+
+function echorun {
+    # echo a command, then run it
+    echo "$@"
+    "$@"
+}
+
+IFS=',' read -ra LISTS <<< "$1"
+USED_LISTS=()
+
+for LIST in "${LISTS[@]}"
+do
+    # try spare lists in random order
+    for i in $(shuf -e {1..10})
+    do
+        SPARE="${USER}-spare-${i}"
+        # try using this spare list
+        if echorun blanche "$SPARE" -R "$LIST"
+        then
+            # initialize list using extra args
+            if [ "$#" -gt 1 ]
+            then
+                echorun blanche "$@"
+            fi
+            # add the spare list to be recreated
+            USED_LISTS+=("$SPARE")
+            break
+        elif blanche "$SPARE" -R "$SPARE" 2> /dev/null
+        then
+            # spare list can be renamed to itself,
+            # so something else went wrong
+            break
+        fi
+    done
+done
+for LIST in "${USED_LISTS[@]}"
+do
+    echorun athrun lua newlist "$LIST"
+done

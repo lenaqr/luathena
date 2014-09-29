@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# greplist: check whether a user is on a list
+#
+# This uses qy geml, so it works on hidden lists too.
+# Assumes you have a spare list named ${USER}-spare-1.
+#
+# Author: Anthony S Lu (lua)
+# Last updated on July 18, 2014
+
+if [ "$#" -ne 2 ]
+then
+    echo "Usage: $0 [username] [list name]"
+    exit 0
+fi
+
+SPARE="${USER}-spare-1"
+blanche "$SPARE" -a "$2"
+qy geml "$SPARE" -s | grep -F "$1"
+blanche "$SPARE" -d "$2"

@@ -1,0 +1,78 @@
+#!/bin/bash -e
+
+# lists-diff-once,
+# based on lists-owned-diff by lizdenys
+# a simple script to check for your list membership changes
+
+# See also: lists-and-owned-diff, lists-owned-diff-once
+
+# Author: Anthony S Lu (lua)
+# Last updated on July 5, 2014
+
+# Check old list membership
+touch OLD_LISTS
+numLists="$(wc -l OLD_LISTS | awk '{print $1}')"
+touch OLD_KLISTS
+numKLists="$(wc -l OLD_KLISTS | awk '{print $1}')"
+
+# Get new list membership
+athrun ops qy -s glom ruser $USER | awk -F , '{print $1}' | sort > NEW_LISTS
+athrun ops qy -s glom rkerberos $USER@ATHENA.MIT.EDU | awk -F , '{print $1}' | sort > NEW_KLISTS
+
+if [ ! -s NEW_LISTS ] && [ $numLists -ne 0 ]; then
+    # Write out that we couldn't get list membership because
+    # either qy failed or they are no longer on any lists.
+    echo "No list membership for "$USER"."
+else
+    # Get changes to list membership
+    removedfrom="$(comm -23 OLD_LISTS NEW_LISTS)"
+    addedto="$(comm -13 OLD_LISTS NEW_LISTS)"
+
+    # Report changes if there are any
+    if [ -n "$removedfrom" ]; then
+        if [ -n "$addedto" ]; then
+            echo "You have been added to the following lists:"
+            echo "$addedto"
+            echo
+            echo "You have been removed from the following lists:"
+            echo "$removedfrom"
+        else
+            echo "You have been removed from the following lists:"
+            echo "$removedfrom"
+        fi
+    elif [ -n "$addedto" ]; then
+        echo "You have been added to the following lists:"
+        echo "$addedto"
+    fi
+fi
+
+if [ ! -s NEW_KLISTS ] && [ $numKLists -ne 0 ]; then
+    # Write out that we couldn't get kerberos list membership
+    # because either qy failed or they are no longer on any lists.
+    echo "No kerberos list membership for "$USER"."
+else
+    # Get changes to list membership
+    kremovedfrom="$(comm -23 OLD_KLISTS NEW_KLISTS)"
+    kaddedto="$(comm -13 OLD_KLISTS NEW_KLISTS)"
+
+    # Report changes if there are any
+    if [ -n "$kremovedfrom" ]; then
+        if [ -n "$kaddedto" ]; then
+            echo "Your kerberos principal has been added to the following lists:"
+            echo "$kaddedto"
+            echo
+            echo "Your kerberos principal has been removed from the following lists:"
+            echo "$kremovedfrom"
+        else
+            echo "Your kerberos principal has been removed from the following lists:"
+            echo "$kremovedfrom"
+        fi
+    elif [ -n "$kaddedto" ]; then
+        echo "Your kerberos principal has been added to the following lists:"
+        echo "$kaddedto"
+    fi
+fi
+
+# Clean up
+mv NEW_LISTS OLD_LISTS
+mv NEW_KLISTS OLD_KLISTS

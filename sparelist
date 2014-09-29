@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# sparelist: create spare Moira lists
+#
+# This is a small wrapper around my other script, newlist. This
+# creates a number of spare lists for you which can be used for
+# makelist or other purposes.
+#
+# See also: newlist, makelist.
+#
+# Author: Anthony S Lu (lua)
+# Last updated on Sept 28, 2013
+
+for i in {1..10}
+do
+    spare="${USER}-spare-${i}"
+    athrun lua newlist "$spare" && echo "$spare"
+done

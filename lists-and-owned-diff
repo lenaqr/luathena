@@ -33,5 +33,4 @@ echo "NEW_LISTS, NEW_KLISTS, NEW_OWNED_LISTS, and NEW_OWNED_KLISTS if they "
 echo "exist, switch to a protected directory, and rerun this script there."
 echo
 
-add lua
 cont-run-zephyr lists-diff-once lists-owned-diff-once

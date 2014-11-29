@@ -1,0 +1,42 @@
+#!/bin/bash -e
+
+# eat-food: Zephyr reminders to eat food at the appropriate times of day.
+#
+# Usage:
+# $ add lua
+# $ eat-food 12:00 21:30
+#
+# This script sends you reminders in zephyr personals at the times you
+# specify. Times may be in 24-hour format (18:00) or am/pm format
+# (6:00pm) and should be separated by a space.
+
+function till {
+    # number of seconds until specified time
+    # usage: timetill 12:00
+    s=$(($(date -d "$1" +%s) - $(date +%s)))
+    echo $((s >= 0 ? s : s + 86400))
+}
+
+function tillnext {
+    # number of seconds until the first of the specified times
+    for time in "$@"; do till "$time"; done | sort -n | head -n1
+}
+
+if [[ "$#" -eq 0 ]]
+then
+    echo "Usage: eat-food [times to be reminded]"
+    echo "Times may be in 24-hour format (18:00) or am/pm format (6:00pm)"
+    echo "and should be separated by a space."
+    exit 1
+fi
+
+# Repeat until given SIGTERM
+while true
+do
+    # Sleep until next time
+    sleep "$(tillnext "$@")"
+    # Zephyr reminder
+    zwrite "$USER" -O auto -s "eat-food" -d -n -m "Remember to eat food!"
+    # Sleep for an additional second so as not to get duplicate reminders...
+    sleep 1
+done

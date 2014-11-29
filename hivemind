@@ -1,0 +1,64 @@
+#!/usr/bin/python2
+
+from __future__ import print_function, unicode_literals
+
+import getpass
+import os
+import random
+import time
+
+import sys
+activate_this = None
+if sys.version_info[0] == 2:
+    if sys.version_info[1] == 7:
+        activate_this = '/mit/lua/pythonenv2.7/bin/activate_this.py'
+if activate_this is not None:
+    execfile(activate_this, dict(__file__=activate_this))
+
+import zephyr
+
+def zephyr_setup(classes):
+    zephyr.init()
+    subs = zephyr.Subscriptions()
+    for c in classes:
+        subs.add((c, '*', '*'))
+
+last_t = [0]
+
+def main(user, entity, classes):
+    zephyr_setup(classes)
+    print("{} has joined the {} hivemind.".format(user, entity))
+    print("Listening...")
+    while True:
+        zgram = zephyr.receive(True)
+        if not zgram:
+            continue
+        t = time.time()
+        if t - last_t[0] < 7200:
+            continue
+        if zgram.opcode.lower() in ['auto', 'ping']:
+            continue
+        if zgram.recipient != '':
+            continue
+        if user == zgram.sender.split('@')[0]:
+            continue
+        if '{} is not a hivemind'.format(entity).lower() in zgram.fields[1].lower():
+            time.sleep(random.expovariate(1))
+            z = zephyr.ZNotice()
+            z.cls = zgram.cls
+            z.instance = zgram.instance
+            z.opcode = 'auto'
+            z.fields = ['{} hivemind'.format(entity),
+                        '{} is not a hivemind.'.format(entity)]
+            z.recipient = ''
+            z.send()
+            last_t[0] = t
+
+if __name__ == '__main__':
+    if len(sys.argv) > 1:
+        user = getpass.getuser()
+        entity = sys.argv[1]
+        classes = sys.argv[2:]
+        main(user, entity, classes)
+    else:
+        print("Usage: {0} [entity] [class]...".format(os.path.basename(sys.argv[0])), file=sys.stderr)

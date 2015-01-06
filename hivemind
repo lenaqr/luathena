@@ -23,18 +23,17 @@ def zephyr_setup(classes):
     for c in classes:
         subs.add((c, '*', '*'))
 
-last_t = [0]
-
 def main(user, entity, classes):
     zephyr_setup(classes)
     print("{} has joined the {} hivemind.".format(user, entity))
     print("Listening...")
+    last_t = 0
     while True:
         zgram = zephyr.receive(True)
         if not zgram:
             continue
         t = time.time()
-        if t - last_t[0] < 7200:
+        if t - last_t < 7200:
             continue
         if zgram.opcode.lower() in ['auto', 'ping']:
             continue
@@ -52,7 +51,7 @@ def main(user, entity, classes):
                         '{} is not a hivemind.'.format(entity)]
             z.recipient = ''
             z.send()
-            last_t[0] = t
+            last_t = t
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:

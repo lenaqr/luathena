@@ -7,7 +7,7 @@
 # See also: lists-and-owned-diff, lists-owned-diff-once
 
 # Author: Anthony S Lu (lua)
-# Last updated on July 5, 2014
+# Last updated on Jan 6, 2015
 
 # Check old list membership
 touch OLD_LISTS
@@ -22,7 +22,8 @@ athrun ops qy -s glom rkerberos $USER@ATHENA.MIT.EDU | awk -F , '{print $1}' | s
 if [ ! -s NEW_LISTS ] && [ $numLists -ne 0 ]; then
     # Write out that we couldn't get list membership because
     # either qy failed or they are no longer on any lists.
-    echo "No list membership for "$USER"."
+    echo "No list membership for "$USER"." >&2
+    exit 1
 else
     # Get changes to list membership
     removedfrom="$(comm -23 OLD_LISTS NEW_LISTS)"
@@ -49,7 +50,8 @@ fi
 if [ ! -s NEW_KLISTS ] && [ $numKLists -ne 0 ]; then
     # Write out that we couldn't get kerberos list membership
     # because either qy failed or they are no longer on any lists.
-    echo "No kerberos list membership for "$USER"."
+    echo "No kerberos list membership for "$USER"." >&2
+    exit 1
 else
     # Get changes to list membership
     kremovedfrom="$(comm -23 OLD_KLISTS NEW_KLISTS)"

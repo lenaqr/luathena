@@ -8,7 +8,7 @@
 # See also: lists-and-owned-diff, lists-diff-once
 
 # Author: Anthony S Lu (lua)
-# Last updated on July 5, 2014
+# Last updated on Jan 6, 2015
 
 # Check old list ownership
 touch OLD_OWNED_LISTS
@@ -23,7 +23,8 @@ athrun ops qy -s gaus rkerberos $USER@ATHENA.MIT.EDU | sort > NEW_OWNED_KLISTS
 if [ ! -s NEW_OWNED_LISTS ] && [ $numOwnedLists -ne 0 ]; then
     # Write out that we couldn't get list membership because
     # either qy failed or they are no longer on any lists.
-    echo "No ownership for "$USER"."
+    echo "No ownership for "$USER"." >&2
+    exit 1
 else
     # Get changes to list ownership
     removedowns="$(comm -23 OLD_OWNED_LISTS NEW_OWNED_LISTS)"
@@ -50,7 +51,8 @@ fi
 if [ ! -s NEW_OWNED_KLISTS ] && [ $numOwnedKLists -ne 0 ]; then
     # Write out that we couldn't get kerberos list membership
     # because either qy failed or they are no longer on any lists.
-    echo "No kerberos ownership for "$USER"."
+    echo "No kerberos ownership for "$USER"." >&2
+    exit 1
 else
     # Get changes to list ownership
     kremovedowns="$(comm -23 OLD_OWNED_KLISTS NEW_OWNED_KLISTS)"

@@ -29,6 +29,8 @@ import os
 import subprocess
 import random
 import getpass
+import re
+import json
 
 import requests
 from requests_kerberos import HTTPKerberosAuth, OPTIONAL
@@ -88,6 +90,11 @@ def load_session():
                                  duration='Session'))
         r3 = s.get(IDP_URL, auth=HTTPKerberosAuth(mutual_authentication=OPTIONAL))
         soup = BeautifulSoup(r3.content)
+        if 'Duo Authentication' in soup.find('title').get_text():
+            sig_response = duo_auth(s, soup, IDP_URL)
+            r3 = s.post(IDP_URL, dict(sig_response=sig_response),
+                        auth=HTTPKerberosAuth(mutual_authentication=OPTIONAL))
+            soup = BeautifulSoup(r3.content)
         form = soup.find('form')
         action = form['action']
         data = dict((item['name'], item['value'])
@@ -96,6 +103,36 @@ def load_session():
         # save this session so we can load it later
         save_session(s)
     return s
+
+def duo_auth(s, soup, parent_url):
+    """Authenticate with Duo Push."""
+
+    script_tag = soup.find('script', text=re.compile(re.escape('Duo.init({')))
+    script_src = script_tag.get_text().strip()
+    assert script_src.startswith('Duo.init({')
+    assert script_src.endswith('});')
+    duo_json = script_src[9:-2].replace("'", '"')
+    duo_params = json.loads(duo_json)
+
+    tx, app = duo_params['sig_request'].split(':')
+    duo_host = 'https://' + duo_params['host']
+    duo_r1 = s.post(duo_host + '/frame/web/v1/auth',
+                    params=dict(tx=tx, parent=parent_url))
+
+    soup1 = BeautifulSoup(duo_r1.content)
+    form = soup1.find('form')
+    sid = form.find('input', dict(name='sid'))['value']
+    device = form.find('select', dict(name='device')).find('option')['value']
+    duo_r2 = s.post(duo_host + '/frame/prompt/new',
+                    dict(sid=sid, device=device, factor='push'))
+
+    txid = duo_r2.json()['response']['txid']
+    duo_r3 = s.post(duo_host + '/frame/status', dict(txid=txid, sid=sid))
+    print(duo_r3.json()['response']['status'], file=sys.stderr)
+    duo_r4 = s.post(duo_host + '/frame/status', dict(txid=txid, sid=sid))
+    print(duo_r4.json()['response']['status'], file=sys.stderr, end=' ')
+    auth = duo_r4.json()['response']['cookie']
+    return ':'.join((auth, app))
 
 def new_list(lname):
     """Create a new list with name lname."""

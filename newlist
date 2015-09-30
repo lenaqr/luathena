@@ -123,8 +123,9 @@ def duo_auth(s, soup, parent_url):
     form = soup1.find('form')
     sid = form.find('input', dict(name='sid'))['value']
     device = form.find('select', dict(name='device')).find('option')['value']
+    factor = form.find('input', dict(name='factor'))['value']
     duo_r2 = s.post(duo_host + '/frame/prompt/new',
-                    dict(sid=sid, device=device, factor='push'))
+                    dict(sid=sid, device=device, factor=factor))
 
     txid = duo_r2.json()['response']['txid']
     duo_r3 = s.post(duo_host + '/frame/status', dict(txid=txid, sid=sid))

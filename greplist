@@ -15,6 +15,9 @@ then
 fi
 
 SPARE="${USER}-spare-1"
-blanche "$SPARE" -a "$2"
-qy geml "$SPARE" -s | grep -F "$1"
-blanche "$SPARE" -d "$2"
+TEMP="$(echo $RANDOM | md5sum | cut -c -32)"
+blanche "$SPARE" -R "$TEMP"
+blanche "$TEMP" -a "$2"
+qy geml "$TEMP" -s | grep -F "$1"
+blanche "$TEMP" -d "$2"
+blanche "$TEMP" -R "$SPARE"

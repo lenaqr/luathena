@@ -8,7 +8,7 @@
 # and within barnowl (or in .owl/startup): source ~/.owl/colors
 #
 # To update after subbing to new classes, do:
-# $ colorsubs ~/.owl/colors | sponge ~/.owl/colors
+# $ colorsubs ~/.owl/colors >> ~/.owl/colors
 #
 # This script reads your zephyr subscriptions file and generates a
 # list of barnowl commands that assigns a color to each class
@@ -35,11 +35,11 @@ if __name__ == '__main__':
                 while c.startswith('un'):
                     c = c[len('un'):]
                 classes.add(c)
-    colors = dict()
+    seen = set()
     if len(sys.argv) > 1:
         with open(os.path.expanduser(sys.argv[1])) as f:
             for line in f:
                 colorclass, cls, color = line.split()
-                colors[cls[1:-1]] = color
-    for c in sorted(classes):
-        print('colorclass', "'" + c + "'", colors.get(c, random.choice(colorcodes)))
+                seen.add(cls[1:-1])
+    for c in sorted(classes - seen):
+        print('colorclass', "'" + c + "'", random.choice(colorcodes))

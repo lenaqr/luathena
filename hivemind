@@ -6,6 +6,7 @@ import getpass
 import os
 import random
 import time
+import textwrap
 
 import sys
 activate_this = None
@@ -23,7 +24,7 @@ def zephyr_setup(classes):
     for c in classes:
         subs.add((c, '*', '*'))
 
-def main(user, entity, classes):
+def main(user, entity, classes, verbose=False):
     zephyr_setup(classes)
     print("{} has joined the {} hivemind.".format(user, entity))
     print("Listening...")
@@ -47,8 +48,16 @@ def main(user, entity, classes):
             z.cls = zgram.cls
             z.instance = zgram.instance
             z.opcode = 'auto'
+            if verbose:
+                message = '''\
+{} maybe has been known to do hivemind-esque things in the past but
+is, fundamentally, a community with diverse viewpoints and myriad
+divergent opinions vocally represented.
+'''
+            else:
+                message = '{} is not a hivemind.'
             z.fields = ['{} hivemind'.format(entity),
-                        '{} is not a hivemind.'.format(entity)]
+                        textwrap.fill(message.format(entity))]
             z.recipient = ''
             z.send()
             last_t = t
@@ -58,6 +67,10 @@ if __name__ == '__main__':
         user = getpass.getuser()
         entity = sys.argv[1]
         classes = sys.argv[2:]
-        main(user, entity, classes)
+        verbose = False
+        if '--verbose' in classes:
+            verbose = True
+            classes = [c for c in classes if c != '--verbose']
+        main(user, entity, classes, verbose=verbose)
     else:
         print("Usage: {0} [entity] [class]...".format(os.path.basename(sys.argv[0])), file=sys.stderr)
